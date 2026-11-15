@@ -91,6 +91,18 @@
         });
     }
 
+    // Quantos meses mostrar no gráfico mensal: do primeiro ao último registo,
+    // no mínimo `min` e no máximo `max` (datas 'AAAA-MM-DD').
+    function monthSpan(firstIso, lastIso, min, max) {
+        const a = String(firstIso).split('-').map(Number);
+        const b = String(lastIso).split('-').map(Number);
+        if (a.length < 2 || b.length < 2 || !isFinite(a[0] + a[1] + b[0] + b[1])) {
+            return min;
+        }
+        const span = (b[0] - a[0]) * 12 + (b[1] - a[1]) + 1;
+        return Math.min(max, Math.max(min, span));
+    }
+
     function bestBeer(beers) {
         return beers.reduce(function (best, beer) {
             if (!best || beer.rating > best.rating ||
@@ -250,6 +262,7 @@
         average: average,
         averageBy: averageBy,
         countByMonth: countByMonth,
+        monthSpan: monthSpan,
         bestBeer: bestBeer,
         computeStats: computeStats,
         isValidIsoDate: isValidIsoDate,

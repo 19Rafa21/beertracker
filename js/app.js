@@ -238,8 +238,85 @@
 
     function updateRatingOutput() {
         const value = Number($('beer-rating').value);
-        $('rating-output').innerHTML = starsHtml(value) + ' ' + escapeHtml(formatNumber(value, 1));
+        $('rating-stars').innerHTML = starsHtml(value);
+        $('rating-output').textContent = formatNumber(value, 1);
         $('beer-rating').setAttribute('aria-valuetext', formatNumber(value, 1) + ' de 5');
+    }
+
+    // Tocar/arrastar nas estrelas: a metade esquerda de cada estrela vale meio ponto.
+    function initRatingStars() {
+        const stars = $('rating-stars');
+        const range = $('beer-rating');
+        let dragging = false;
+        function setFromPointer(event) {
+            const rect = stars.getBoundingClientRect();
+            const x = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+            const value = Math.max(1, Math.ceil(x * 10) / 2);
+            if (Number(range.value) !== value) {
+                range.value = value;
+                updateRatingOutput();
+            }
+        }
+        stars.addEventListener('pointerdown', function (event) {
+            dragging = true;
+            stars.setPointerCapture(event.pointerId);
+            setFromPointer(event);
+            range.focus({ preventScroll: true });
+        });
+        stars.addEventListener('pointermove', function (event) {
+            if (dragging) {
+                setFromPointer(event);
+            }
+        });
+        stars.addEventListener('pointerup', function () { dragging = false; });
+        stars.addEventListener('pointercancel', function () { dragging = false; });
+    }
+
+    // ---------- Formulário em folha (telemóvel) ----------
+
+    const mobileQuery = window.matchMedia('(max-width: 720px)');
+
+    function isSheetOpen() {
+        return document.body.classList.contains('sheet-open');
+    }
+
+    // No computador o formulário está sempre visível: basta levar o utilizador até ele.
+    // No telemóvel abre como uma folha que sobe do fundo do ecrã.
+    function openForm() {
+        const sheet = $('form-sheet');
+        if (!mobileQuery.matches) {
+            sheet.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            $('beer-name').focus({ preventScroll: true });
+            return;
+        }
+        $('sheet-backdrop').hidden = false;
+        sheet.setAttribute('role', 'dialog');
+        sheet.setAttribute('aria-modal', 'true');
+        $('add-fab').setAttribute('aria-expanded', 'true');
+        // Deixa o fundo aparecer antes de animar a folha.
+        requestAnimationFrame(function () {
+            document.body.classList.add('sheet-open');
+            setTimeout(function () { $('beer-name').focus({ preventScroll: true }); }, 60);
+        });
+    }
+
+    function closeForm(returnFocus) {
+        if (!isSheetOpen()) {
+            return;
+        }
+        const sheet = $('form-sheet');
+        document.body.classList.remove('sheet-open');
+        sheet.removeAttribute('role');
+        sheet.removeAttribute('aria-modal');
+        $('add-fab').setAttribute('aria-expanded', 'false');
+        setTimeout(function () {
+            if (!isSheetOpen()) {
+                $('sheet-backdrop').hidden = true;
+            }
+        }, 260);
+        if (returnFocus !== false) {
+            $('add-fab').focus({ preventScroll: true });
+        }
     }
 
     function resetForm() {
@@ -272,10 +349,8 @@
         $('form-title').textContent = 'Editar cerveja';
         $('submit-button').textContent = 'Guardar alterações';
         $('cancel-edit').classList.remove('hidden');
-        const card = document.querySelector('.beer-form');
-        card.classList.add('editing');
-        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        $('beer-name').focus({ preventScroll: true });
+        document.querySelector('.beer-form').classList.add('editing');
+        openForm();
     }
 
     function handleSubmit(event) {
@@ -294,7 +369,9 @@
         upsertBeer(result.beer);
         showToast(isEdit ? 'Alterações guardadas.' : '"' + result.beer.name + '" adicionada.');
         resetForm();
-        if (!isEdit) {
+        if (isSheetOpen()) {
+            closeForm();
+        } else if (!isEdit) {
             $('beer-name').focus();
         }
     }
@@ -452,10 +529,7 @@
             $('beer-country').value = country;
         }
         location.hash = PAGE_HASH.home;
-        setTimeout(function () {
-            document.querySelector('.beer-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            $('beer-name').focus({ preventScroll: true });
-        }, 50);
+        setTimeout(openForm, 80);
         showToast('A registar uma cerveja em ' + place.name + '.');
     }
 
@@ -522,12 +596,7 @@
             const sub = [beer.brand, beer.country].filter(Boolean).map(escapeHtml).join(' · ');
             return '<li class="entry' + (beer.id === highlightId ? ' highlight' : '') + '" data-id="' + escapeHtml(beer.id) + '"' +
                 ' style="--type-color: ' + typeColor(beer.type) + '; --i: ' + Math.min(index, 12) + '">' +
-                '<time class="entry-date" datetime="' + escapeHtml(beer.date) + '">' +
-                    '<span class="entry-day">' + escapeHtml(d.day) + '</span>' +
-                    '<span class="entry-month">' + escapeHtml(d.month) + '</span>' +
-                    '<span class="entry-year">' + escapeHtml(d.year) + '</span>' +
-                '</time>' +
-                '<svg class="entry-glass" viewBox="0 0 32 40" aria-hidden="true"><use href="#i-glass"/></svg>' +
+                '<span class="entry-glass" aria-hidden="true"><svg viewBox="0 0 32 40"><use href="#i-glass"/></svg></span>' +
                 '<div class="entry-main">' +
                     '<h3 class="entry-name">' + name + '</h3>' +
                     '<p class="entry-sub">' + sub + '</p>' +
@@ -537,7 +606,10 @@
                     '</div>' +
                     (beer.notes ? '<p class="entry-notes">' + escapeHtml(beer.notes) + '</p>' : '') +
                 '</div>' +
-                '<div class="entry-rating">' + ratingHtml(Number(beer.rating)) + '</div>' +
+                '<div class="entry-side">' +
+                    '<div class="entry-rating">' + ratingHtml(Number(beer.rating)) + '</div>' +
+                    '<time class="entry-date" datetime="' + escapeHtml(beer.date) + '">' + escapeHtml(d.day + ' ' + d.month + ' ' + d.year) + '</time>' +
+                '</div>' +
                 '<div class="row-actions">' +
                     '<button type="button" class="icon-button" data-action="edit" aria-label="Editar ' + name + '" title="Editar">' + iconSvg('pencil') + '</button>' +
                     '<button type="button" class="icon-button danger" data-action="remove" aria-label="Remover ' + name + '" title="Remover">' + iconSvg('trash') + '</button>' +
@@ -644,9 +716,13 @@
         $('top-type').textContent = stats.topType ? 'Favorito: ' + stats.topType : '';
         $('best-beer').textContent = stats.best ? stats.best.name : '—';
         $('best-beer').title = stats.best ? stats.best.name : '';
-        $('best-beer-sub').textContent = stats.best
-            ? formatNumber(stats.best.rating, 1) + ' ★ · ' + stats.best.brand + ' · ' + formatDate(stats.best.date)
-            : '';
+        if (stats.best) {
+            const d = dateParts(stats.best.date);
+            $('best-beer-sub').textContent = formatNumber(stats.best.rating, 1) + ' ★ · ' + stats.best.brand + ' · ' + d.day + ' ' + d.month + ' ' + d.year;
+            document.querySelector('.stat-card-wide').style.setProperty('--type-color', typeColor(stats.best.type));
+        } else {
+            $('best-beer-sub').textContent = '';
+        }
 
         renderCharts(stats);
     }
@@ -666,12 +742,31 @@
         Chart.defaults.color = cssVar('--muted');
         Chart.defaults.borderColor = cssVar('--border');
         Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+        Chart.defaults.font.size = 12;
+        // Dicas com o aspeto da app (fundo de malte, cantos redondos, números em pt-PT).
+        Object.assign(Chart.defaults.plugins.tooltip, {
+            backgroundColor: '#1c1008',
+            titleColor: '#fff6e5',
+            bodyColor: '#fff6e5',
+            borderColor: 'rgba(242, 162, 12, 0.4)',
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 10,
+            displayColors: true,
+            boxPadding: 4,
+            titleFont: { weight: '700' }
+        });
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+        Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
 
         const byCountry = BeerStats.sortCounts(stats.byCountry);
         const byType = BeerStats.sortCounts(stats.byType);
         // Termina no mês do registo mais recente, para o gráfico não ficar vazio com dados antigos.
-        const latest = beers.reduce(function (max, b) { return String(b.date) > max ? String(b.date) : max; }, '');
-        const months = BeerStats.countByMonth(beers, latest || todayIso(), 12);
+        const dates = beers.map(function (b) { return String(b.date); }).sort();
+        const latest = dates[dates.length - 1] || todayIso();
+        const span = BeerStats.monthSpan(dates[0], latest, 6, 12);
+        const months = BeerStats.countByMonth(beers, latest, span);
+        $('month-range').textContent = span + ' meses até ao último registo';
         const ratingTypes = Object.keys(stats.ratingByType).sort(function (a, b) {
             return stats.ratingByType[b] - stats.ratingByType[a];
         });
@@ -680,17 +775,17 @@
 
         drawChart('month', 'bar', {
             labels: months.map(function (m) { return m.label; }),
-            datasets: [{ data: months.map(function (m) { return m.count; }), backgroundColor: primary, borderRadius: 8 }]
+            datasets: [{ data: months.map(function (m) { return m.count; }), backgroundColor: primary, hoverBackgroundColor: cssVar('--primary-strong'), borderRadius: 10, borderSkipped: false, maxBarThickness: 44 }]
         }, barOptions({ precision: 0 }));
 
         drawChart('country', 'doughnut', {
             labels: byCountry.map(function (c) { return c.label; }),
-            datasets: [{ data: byCountry.map(function (c) { return c.count; }), backgroundColor: CHART_COLORS, borderColor: surface }]
+            datasets: [{ data: byCountry.map(function (c) { return c.count; }), backgroundColor: CHART_COLORS, borderColor: surface, borderWidth: 3, hoverOffset: 8 }]
         }, pieOptions());
 
         drawChart('type', 'pie', {
             labels: byType.map(function (c) { return c.label; }),
-            datasets: [{ data: byType.map(function (c) { return c.count; }), backgroundColor: byType.map(function (c) { return typeColor(c.label); }), borderColor: surface }]
+            datasets: [{ data: byType.map(function (c) { return c.count; }), backgroundColor: byType.map(function (c) { return typeColor(c.label); }), borderColor: surface, borderWidth: 3, hoverOffset: 8 }]
         }, pieOptions());
 
         drawChart('rating', 'bar', {
@@ -698,7 +793,7 @@
             datasets: [{
                 data: ratingTypes.map(function (t) { return Number(stats.ratingByType[t].toFixed(2)); }),
                 backgroundColor: ratingTypes.map(typeColor),
-                borderRadius: 8, borderWidth: 1, borderColor: cssVar('--border')
+                borderRadius: 10, borderSkipped: false, maxBarThickness: 56, borderWidth: 1, borderColor: cssVar('--border')
             }]
         }, barOptions({ min: 0, max: 5, stepSize: 1 }));
     }
@@ -709,8 +804,12 @@
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                x: { grid: { display: false } },
-                y: { beginAtZero: true, min: ticks.min, max: ticks.max, ticks: { precision: ticks.precision, stepSize: ticks.stepSize } }
+                x: { grid: { display: false }, border: { display: false } },
+                y: {
+                    beginAtZero: true, min: ticks.min, max: ticks.max,
+                    grid: { color: cssVar('--border'), drawBorder: false },
+                    ticks: { precision: ticks.precision, stepSize: ticks.stepSize, padding: 8 }
+                }
             }
         };
     }
@@ -719,7 +818,8 @@
         return {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } }
+            cutout: '62%',
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 14 } } }
         };
     }
 
@@ -807,16 +907,32 @@
         initSuggestions();
         $('beer-rating').addEventListener('input', updateRatingOutput);
         $('cancel-edit').addEventListener('click', resetForm);
+        initRatingStars();
         $('hero-cta').addEventListener('click', function (event) {
             event.preventDefault();
-            document.querySelector('.beer-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            $('beer-name').focus({ preventScroll: true });
+            openForm();
         });
-        form.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape' && $('beer-id').value) {
+        $('add-fab').addEventListener('click', openForm);
+        $('close-form').addEventListener('click', function () { closeForm(); });
+        $('sheet-backdrop').addEventListener('click', function () { closeForm(); });
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+            if ($('beer-id').value && form.contains(document.activeElement)) {
                 resetForm();
             }
+            closeForm();
         });
+        // Passar de telemóvel para ecrã largo com a folha aberta: fecha-a.
+        const onLayoutChange = function () {
+            if (!mobileQuery.matches) {
+                closeForm(false);
+            }
+        };
+        if (mobileQuery.addEventListener) {
+            mobileQuery.addEventListener('change', onLayoutChange);
+        }
         // Limpa o erro de um campo assim que o utilizador o corrige.
         form.addEventListener('input', function (event) {
             const field = event.target.id.replace('beer-', '');

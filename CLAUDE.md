@@ -34,7 +34,7 @@ Não há passo de build nem dependências npm.
 - Lógica nova que não dependa do DOM vai para `js/stats.js` (ou outro módulo puro) com testes.
 - Tudo o que vem do utilizador passa por `escapeHtml` antes de entrar em `innerHTML`.
 - Ícones: só SVG do conjunto no topo do `index.html` (`<svg class="i"><use href="#i-nome"/></svg>`, traço ao estilo Lucide). Nada de emojis como ícones.
-- Visual "taberna artesanal": cabeçalho e hero escuros (malte), cartões claros sobre creme, âmbar para ações. No telemóvel (≤720px) a navegação é uma barra fixa em baixo.
+- Visual "taberna artesanal": cabeçalho e hero escuros (malte), cartões claros sobre creme, âmbar para ações. No telemóvel (≤720px) a navegação é uma barra fixa em baixo e o formulário abre como folha a partir do botão "+" (`openForm`/`closeForm` em `app.js`); não pôr `backdrop-filter`, `transform` nem `filter` em antepassados de elementos `position: fixed`.
 - Datas guardadas como `AAAA-MM-DD` (string). Não converter com `new Date()` para mostrar: usar `formatDate`.
 
 ## Dados

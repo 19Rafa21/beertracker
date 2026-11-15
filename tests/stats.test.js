@@ -107,3 +107,11 @@ test('parseBackup aceita lista ou { beers } e ignora entradas inválidas', () =>
     assert.throws(() => S.parseBackup('não é json'), /JSON/);
     assert.throws(() => S.parseBackup('{"a":1}'), /lista/);
 });
+
+test('monthSpan conta os meses entre registos, com mínimo e máximo', () => {
+    const { monthSpan } = S;
+    assert.equal(monthSpan('2025-02-15', '2025-03-01', 6, 12), 6);
+    assert.equal(monthSpan('2024-12-01', '2025-09-30', 6, 12), 10);
+    assert.equal(monthSpan('2020-01-01', '2025-09-30', 6, 12), 12);
+    assert.equal(monthSpan('', '2025-09-30', 6, 12), 6);
+});

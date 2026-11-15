@@ -47,6 +47,7 @@
         <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6M14 11v6"/></symbol>
         <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
         <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
         <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
         <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
         <symbol id="i-sort" viewBox="0 0 24 24"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></symbol>
@@ -57,6 +58,7 @@
             <path d="M5 9h22l-2.3 27a2.4 2.4 0 0 1-2.4 2.2H9.7a2.4 2.4 0 0 1-2.4-2.2z" fill="currentColor" stroke="none"/>
             <path d="M3.5 9.5c0-3 2.6-4.6 5-3.8C9.8 3.1 13 2 16 3.5c2.7-1.5 6.1-.5 7.3 2 2.7-.5 5.2 1.2 5.2 4V12h-25z" fill="#fff8ea" stroke="none"/>
             <path d="M10 16l1.2 17" stroke="#fff" stroke-opacity=".45" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+            <path d="M5 9h22l-2.3 27a2.4 2.4 0 0 1-2.4 2.2H9.7a2.4 2.4 0 0 1-2.4-2.2z" fill="none" stroke-width="1.6" stroke-linejoin="round" style="stroke: var(--glass-outline, rgba(60, 30, 0, 0.35))"/>
         </symbol>
     </svg>
 
@@ -137,10 +139,14 @@
                 </div>
 
                 <div class="home-layout">
-                    <section class="card beer-form" aria-labelledby="form-title">
+                    <section class="card beer-form" id="form-sheet" aria-labelledby="form-title">
+                        <div class="sheet-grabber" aria-hidden="true"></div>
                         <div class="card-head">
                             <span class="card-icon" aria-hidden="true"><svg class="i"><use href="#i-plus"/></svg></span>
                             <h2 id="form-title">Adicionar nova cerveja</h2>
+                            <button type="button" class="icon-button sheet-close" id="close-form" aria-label="Fechar formulário" title="Fechar">
+                                <svg class="i" aria-hidden="true"><use href="#i-x"/></svg>
+                            </button>
                         </div>
                         <form id="beer-form" novalidate>
                             <input type="hidden" id="beer-id">
@@ -198,9 +204,11 @@
                                 </div>
                                 <div class="form-group span-2">
                                     <label for="beer-rating">Avaliação</label>
+                                    <!-- As estrelas são o controlo visível; o range por baixo trata do teclado e dos leitores de ecrã. -->
                                     <div class="rating-input">
-                                        <input type="range" id="beer-rating" name="rating" min="1" max="5" step="0.5" value="3" aria-describedby="error-rating">
+                                        <div class="rating-stars" id="rating-stars" aria-hidden="true"></div>
                                         <output for="beer-rating" id="rating-output" class="rating-output"></output>
+                                        <input type="range" id="beer-rating" class="rating-range" name="rating" min="1" max="5" step="0.5" value="3" aria-describedby="error-rating">
                                     </div>
                                     <p class="field-error" id="error-rating"></p>
                                 </div>
@@ -263,6 +271,10 @@
                         <p id="no-results" class="empty-message hidden">Nenhuma cerveja corresponde à pesquisa.</p>
                     </section>
                 </div>
+                <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+                <button type="button" class="fab" id="add-fab" aria-label="Registar cerveja" aria-controls="form-sheet" aria-expanded="false">
+                    <svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>
+                </button>
             </section>
 
             <!-- Página de estatísticas -->
@@ -285,6 +297,7 @@
                             <div class="stat-title">Melhor avaliada</div>
                             <div class="stat-value stat-value-text" id="best-beer">—</div>
                             <div class="stat-sub" id="best-beer-sub"></div>
+                            <svg class="best-glass" viewBox="0 0 32 40" aria-hidden="true"><use href="#i-glass"/></svg>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon" aria-hidden="true"><svg class="i"><use href="#i-beer"/></svg></div>
@@ -323,7 +336,7 @@
                     <p id="charts-unavailable" class="empty-message hidden">Não foi possível carregar os gráficos (sem ligação à internet).</p>
                     <div class="charts-container" id="charts-container">
                         <div class="card chart-container chart-wide">
-                            <h2>Cervejas por mês <span class="muted">12 meses até ao último registo</span></h2>
+                            <h2>Cervejas por mês <span class="muted" id="month-range">até ao último registo</span></h2>
                             <div class="chart-box"><canvas id="month-chart" role="img" aria-label="Gráfico de barras com o número de cervejas por mês"></canvas></div>
                         </div>
                         <div class="card chart-container">
