@@ -79,3 +79,36 @@ test('padBounds alarga a área e containsBounds verifica se uma cabe na outra', 
     assert.equal(P.containsBounds(padded, { south: -1, north: 1, west: 10, east: 12 }), false);
     assert.equal(P.containsBounds(null, padded), false);
 });
+
+test('parseNominatimPlaces lê pubs e bares do Nominatim', () => {
+    const list = [
+        { osm_type: 'node', osm_id: 1, lat: '41.14', lon: '-8.61', name: 'Honey Bee', type: 'pub',
+          address: { road: 'Rua de Trás', house_number: '11', city: 'Porto', country_code: 'pt' },
+          extratags: { opening_hours: 'Mo-Su 17:00-02:00', website: 'honeybee.pt' } },
+        { osm_type: 'way', osm_id: 2, lat: '41.15', lon: '-8.60', name: 'Café', type: 'cafe' },
+        { osm_type: 'node', osm_id: 3, lat: '41.15', lon: '-8.60', name: '', type: 'bar' },
+        { osm_type: 'node', osm_id: 1, lat: '41.14', lon: '-8.61', name: 'Honey Bee', type: 'pub' }
+    ];
+    const places = P.parseNominatimPlaces(list);
+    assert.equal(places.length, 1);
+    assert.deepEqual(places[0], {
+        id: 'node/1', name: 'Honey Bee', kind: 'pub', lat: 41.14, lon: -8.61,
+        address: 'Rua de Trás 11, Porto', hours: 'Mo-Su 17:00-02:00', website: 'https://honeybee.pt',
+        beers: [], outdoor: false, countryCode: 'PT'
+    });
+    assert.deepEqual(P.parseNominatimPlaces(null), []);
+});
+
+test('mergePlaces prefere a lista principal e junta o resto', () => {
+    const overpass = [{ id: 'node/1', name: 'A', address: '', countryCode: '' }];
+    const quick = [
+        { id: 'node/1', name: 'A (rápido)', address: 'Rua X', countryCode: 'PT' },
+        { id: 'node/2', name: 'B', address: '', countryCode: 'PT' }
+    ];
+    const merged = P.mergePlaces(overpass, quick);
+    assert.equal(merged.length, 2);
+    assert.equal(merged[0].name, 'A');
+    assert.equal(merged[0].address, 'Rua X');
+    assert.equal(merged[0].countryCode, 'PT');
+    assert.equal(overpass[0].address, '');
+});

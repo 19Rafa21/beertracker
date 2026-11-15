@@ -36,6 +36,31 @@
         return TYPE_COLORS[type] || '#9a8b78';
     }
 
+    // Abreviatura impressa na carica de cada cerveja.
+    const TYPE_ABBR = {
+        'Lager': 'LAG', 'Pilsner': 'PIL', 'IPA': 'IPA', 'Pale Ale': 'APA', 'Ale': 'ALE',
+        'Stout': 'STO', 'Porter': 'POR', 'Weiss': 'WEI', 'Sour': 'SOU', 'Outro': '···'
+    };
+
+    // Texto claro em caricas escuras, escuro em caricas claras.
+    function capInk(hex) {
+        const n = parseInt(String(hex).replace('#', ''), 16);
+        const r = (n >> 16) & 255;
+        const g = (n >> 8) & 255;
+        const b = n & 255;
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.55 ? '#2a1600' : '#fff6e5';
+    }
+
+    // Nº de cada cerveja pela ordem em que foi bebida (como um número de lote).
+    function batchNumbers() {
+        const numbers = {};
+        BeerStats.sortBeers(beers, 'date', 'asc').forEach(function (beer, i) {
+            numbers[beer.id] = String(i + 1).padStart(3, '0');
+        });
+        return numbers;
+    }
+
     const PAGE_HASH = { home: '#inicio', stats: '#estatisticas', map: '#mapa' };
     const PAGE_TITLES = { home: 'Registo de Cervejas', stats: 'Estatísticas', map: 'Mapa de bares' };
     const FIELDS = ['name', 'brand', 'type', 'country', 'abv', 'rating', 'date', 'notes'];
@@ -589,20 +614,24 @@
     function renderBeerList() {
         const filtered = BeerStats.filterBeers(beers, { query: searchInput.value, type: filterType.value });
         const sorted = BeerStats.sortBeers(filtered, sortState.field, sortState.direction);
+        const numbers = batchNumbers();
 
         beerListBody.innerHTML = sorted.map(function (beer, index) {
+            const color = typeColor(beer.type);
             const name = escapeHtml(beer.name);
             const d = dateParts(beer.date);
             const sub = [beer.brand, beer.country].filter(Boolean).map(escapeHtml).join(' · ');
             return '<li class="entry' + (beer.id === highlightId ? ' highlight' : '') + '" data-id="' + escapeHtml(beer.id) + '"' +
-                ' style="--type-color: ' + typeColor(beer.type) + '; --i: ' + Math.min(index, 12) + '">' +
-                '<span class="entry-glass" aria-hidden="true"><svg viewBox="0 0 32 40"><use href="#i-glass"/></svg></span>' +
+                ' style="--type-color: ' + color + '; --cap-ink: ' + capInk(color) + '; --i: ' + Math.min(index, 12) + '">' +
+                '<span class="entry-cap" aria-hidden="true"><svg viewBox="-2 -2 44 44"><use href="#i-cap"/></svg>' +
+                    '<span class="cap-label">' + escapeHtml(TYPE_ABBR[beer.type] || '···') + '</span></span>' +
                 '<div class="entry-main">' +
+                    '<p class="entry-batch">Nº ' + escapeHtml(numbers[beer.id] || '') + '</p>' +
                     '<h3 class="entry-name">' + name + '</h3>' +
                     '<p class="entry-sub">' + sub + '</p>' +
                     '<div class="entry-tags">' +
                         '<span class="type-badge">' + escapeHtml(beer.type) + '</span>' +
-                        '<span class="abv-pill">' + iconSvg('droplet') + escapeHtml(formatNumber(beer.abv, 1)) + '%</span>' +
+                        '<span class="abv-pill">' + escapeHtml(formatNumber(beer.abv, 1)) + '% vol</span>' +
                     '</div>' +
                     (beer.notes ? '<p class="entry-notes">' + escapeHtml(beer.notes) + '</p>' : '') +
                 '</div>' +

@@ -12,13 +12,13 @@
         'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
         'https://overpass.private.coffee/api/interpreter'
     ];
-    const ATTEMPT_TIMEOUT = 45000;
+    const ATTEMPT_TIMEOUT = 35000;
     const CACHE_KEY = 'placesCache';
     const CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
     const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
     const VIEW_KEY = 'mapView';
     // Bairro Alto / Cais do Sodré, em Lisboa.
-    const DEFAULT_VIEW = { lat: 38.7105, lon: -9.1435, zoom: 16 };
+    const DEFAULT_VIEW = { lat: 38.7105, lon: -9.1435, zoom: 15 };
 
     const P = window.BeerPlaces;
     // Ícone (do conjunto em index.html) de cada tipo de local.
@@ -38,7 +38,8 @@
         userPos: null,
         userMarker: null,
         lastSearch: null,
-        request: null
+        request: null,
+        note: ''
     };
 
     function escapeHtml(value) {
@@ -213,23 +214,52 @@
         }
         const controller = new AbortController();
         state.request = controller;
+        state.note = 'a carregar mais…';
+        state.places = [];
+        showPlaces([]);
         $('place-list').setAttribute('aria-busy', 'true');
-        setStatus('A procurar bares… os servidores do OpenStreetMap podem demorar até meio minuto.');
+        setStatus('A procurar bares…');
 
+        let quick = [];
+        let full = null;
+
+        // 1) Primeira vista rápida (Nominatim): pubs e bares mais conhecidos da zona visível.
+        fetchQuickPlaces(view, controller.signal).then(function (places) {
+            if (controller.signal.aborted || full) {
+                return;
+            }
+            quick = places;
+            if (quick.length) {
+                state.places = quick;
+                showPlaces(quick);
+            }
+        });
+
+        // 2) Lista completa (Overpass): cervejarias, horários e todos os locais da zona.
         fetchFromServers(P.buildOverpassQuery(bounds, 400), controller.signal)
             .then(function (data) {
+                full = P.mergePlaces(P.parsePlaces(data), quick);
+                state.note = '';
                 state.lastSearch = bounds;
-                state.places = P.parsePlaces(data);
-                writeCache(bounds, state.places);
-                showPlaces(state.places);
+                state.places = full;
+                writeCache(bounds, full);
+                showPlaces(full);
             })
             .catch(function (error) {
-                if (error.name === 'AbortError' && controller.signal.aborted) {
+                if (controller.signal.aborted) {
                     return;
                 }
-                setStatus(navigator.onLine === false
-                    ? 'Sem ligação. Verifique a internet e tente outra vez.'
-                    : 'Os servidores de mapas estão ocupados. Tente daqui a pouco.');
+                if (quick.length) {
+                    // Fica com a primeira vista; o resto pode ser pedido outra vez.
+                    state.note = 'lista parcial: os servidores do OpenStreetMap estão ocupados';
+                    state.lastSearch = view;
+                    showPlaces(state.places);
+                } else {
+                    state.note = '';
+                    setStatus(navigator.onLine === false
+                        ? 'Sem ligação. Verifique a internet e tente outra vez.'
+                        : 'Os servidores de mapas estão ocupados. Tente daqui a pouco.');
+                }
                 $('search-area').classList.remove('hidden');
             })
             .finally(function () {
@@ -238,6 +268,46 @@
                     $('place-list').removeAttribute('aria-busy');
                 }
             });
+    }
+
+    // Pedidos ao Nominatim espaçados de 1,1 s (regra de utilização do serviço).
+    // Pedidos de pesquisas já canceladas saem da fila sem esperar.
+    let nominatimQueue = Promise.resolve();
+    let lastNominatimAt = 0;
+    function nominatimFetch(url, signal) {
+        const run = nominatimQueue.then(function () {
+            if (signal && signal.aborted) {
+                throw new DOMException('Cancelado', 'AbortError');
+            }
+            const wait = Math.max(0, lastNominatimAt + 1100 - Date.now());
+            return new Promise(function (resolve) { setTimeout(resolve, wait); }).then(function () {
+                if (signal && signal.aborted) {
+                    throw new DOMException('Cancelado', 'AbortError');
+                }
+                lastNominatimAt = Date.now();
+                return fetch(url, { signal: signal });
+            }).then(function (response) {
+                if (!response.ok) {
+                    throw new Error('nominatim ' + response.status);
+                }
+                return response.json();
+            });
+        });
+        nominatimQueue = run.catch(function () {});
+        return run;
+    }
+
+    function fetchQuickPlaces(view, signal) {
+        const box = [view.west, view.north, view.east, view.south].map(function (n) { return n.toFixed(5); }).join(',');
+        const base = NOMINATIM_URL + '?format=jsonv2&limit=40&bounded=1&addressdetails=1&extratags=1&accept-language=pt-PT&viewbox=' + box + '&amenity=';
+        const requests = ['pub', 'bar', 'biergarten'].map(function (kind) {
+            return nominatimFetch(base + kind, signal)
+                .then(P.parseNominatimPlaces)
+                .catch(function () { return []; });
+        });
+        return Promise.all(requests).then(function (lists) {
+            return lists.reduce(function (all, list) { return P.mergePlaces(all, list); }, []);
+        });
     }
 
     // ---------- Mostrar resultados ----------
@@ -327,14 +397,15 @@
                 '</button></li>';
         }).join('');
 
-        if (!state.lastSearch) {
+        if (!state.lastSearch && !state.note) {
             return;
         }
         if (!places.length) {
             setStatus('Nenhum bar encontrado aqui. Afaste o mapa ou procure outra zona.');
         } else {
             setStatus(visible.length + (visible.length === 1 ? ' local' : ' locais') +
-                (fromYou ? ', do mais perto de si' : ', do mais perto do centro do mapa'));
+                (fromYou ? ', do mais perto de si' : ', do mais perto do centro do mapa') +
+                (state.note ? ' · ' + state.note : ''));
         }
     }
 
@@ -370,7 +441,7 @@
             state.userMarker = L.circleMarker([state.userPos.lat, state.userPos.lon], {
                 radius: 8, color: '#fff', weight: 3, fillColor: '#1d6fd6', fillOpacity: 1
             }).bindTooltip('Está aqui').addTo(state.map);
-            state.map.setView([state.userPos.lat, state.userPos.lon], 16);
+            state.map.setView([state.userPos.lat, state.userPos.lon], 15);
             searchArea();
         }, function (error) {
             setStatus(error.code === 1
@@ -386,13 +457,7 @@
         }
         setStatus('A procurar "' + q + '"…');
         const url = NOMINATIM_URL + '?format=jsonv2&limit=1&accept-language=pt&q=' + encodeURIComponent(q);
-        fetch(url)
-            .then(function (response) {
-                if (!response.ok) {
-                    throw new Error();
-                }
-                return response.json();
-            })
+        nominatimFetch(url)
             .then(function (results) {
                 if (!results.length) {
                     setStatus('Não encontrei "' + q + '". Experimente outro nome.');
@@ -401,11 +466,11 @@
                 const r = results[0];
                 const bb = r.boundingbox.map(Number); // [sul, norte, oeste, este]
                 const box = { south: bb[0], north: bb[1], west: bb[2], east: bb[3] };
-                // Cidades inteiras são grandes demais: centra-se no ponto principal.
+                // Escala de bairro: cidades inteiras são grandes demais e uma rua é pequena demais.
                 if (P.isAreaTooLarge(box)) {
-                    state.map.setView([Number(r.lat), Number(r.lon)], 16);
+                    state.map.setView([Number(r.lat), Number(r.lon)], 15);
                 } else {
-                    state.map.fitBounds([[box.south, box.west], [box.north, box.east]], { maxZoom: 17 });
+                    state.map.fitBounds([[box.south, box.west], [box.north, box.east]], { maxZoom: 15 });
                 }
                 searchArea();
             })

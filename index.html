@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#1c1008">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600..900;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Figtree:wght@400..700&family=Space+Mono:wght@400;700&display=swap">
     <title>Registo de Cervejas · BeerTracker</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231c1008'/%3E%3Cpath d='M9 10h14l-1.6 15.2a1.5 1.5 0 0 1-1.5 1.3h-7.8a1.5 1.5 0 0 1-1.5-1.3z' fill='%23f2a20c'/%3E%3Cpath d='M8 9.5c0-2 1.6-3 3.2-2.6C12 5.3 14 4.6 16 5.6c1.8-1 4-.3 4.8 1.3 1.8-.3 3.2.8 3.2 2.6v1.5H8z' fill='%23fff6e5'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/styles.css">
@@ -53,6 +53,12 @@
         <symbol id="i-sort" viewBox="0 0 24 24"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></symbol>
         <symbol id="i-route" viewBox="0 0 24 24"><path d="M3 11 22 2l-9 19-2-8-8-2z"/></symbol>
         <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+        <!-- Carica (tampa de garrafa): o motivo da marca. Cor = currentColor. -->
+        <symbol id="i-cap" viewBox="-2 -2 44 44">
+            <path d="M20.00 0.00 L22.62 2.60 L25.90 0.89 L27.64 4.14 L31.27 3.48 L31.97 7.10 L35.64 7.53 L35.24 11.20 L38.62 12.69 L37.16 16.08 L39.94 18.51 L37.55 21.32 L39.50 24.45 L36.38 26.43 L37.32 30.00 L33.76 30.97 L33.60 34.66 L29.91 34.54 L28.68 38.02 L25.19 36.82 L22.98 39.78 L20.00 37.60 L17.02 39.78 L14.81 36.82 L11.32 38.02 L10.09 34.54 L6.40 34.66 L6.24 30.97 L2.68 30.00 L3.62 26.43 L0.50 24.45 L2.45 21.32 L0.06 18.51 L2.84 16.08 L1.38 12.69 L4.76 11.20 L4.36 7.53 L8.03 7.10 L8.73 3.48 L12.36 4.14 L14.10 0.89 L17.38 2.60 L20.00 0.00Z" fill="currentColor" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+            <circle cx="20" cy="20" r="13.2" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1.4"/>
+            <path d="M11 13.5a11 11 0 0 1 9-5.5" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2" stroke-linecap="round"/>
+        </symbol>
         <!-- Copo pequeno da lista: o líquido usa a cor do tipo (currentColor). -->
         <symbol id="i-glass" viewBox="0 0 32 40">
             <path d="M5 9h22l-2.3 27a2.4 2.4 0 0 1-2.4 2.2H9.7a2.4 2.4 0 0 1-2.4-2.2z" fill="currentColor" stroke="none"/>
@@ -68,8 +74,11 @@
         <div class="container">
             <nav class="nav" aria-label="Principal">
                 <a href="#inicio" class="logo" data-page="home">
-                    <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 32 40"><use href="#i-glass"/></svg></span>
-                    <span class="logo-text">Beer<em>Tracker</em></span>
+                    <span class="logo-mark" aria-hidden="true">
+                        <svg class="logo-cap" viewBox="-2 -2 44 44"><use href="#i-cap"/></svg>
+                        <svg class="logo-glass" viewBox="0 0 32 40"><use href="#i-glass"/></svg>
+                    </span>
+                    <span class="logo-text">beer<em>tracker</em></span>
                 </a>
                 <ul class="nav-links">
                     <li><a href="#inicio" class="nav-item" data-page="home"><svg class="i" aria-hidden="true"><use href="#i-home"/></svg><span>Início</span></a></li>
@@ -89,8 +98,18 @@
             <!-- Página inicial -->
             <section id="home-page" aria-labelledby="home-title">
                 <div class="hero">
+                    <!-- Selo a rodar: texto em círculo à volta de uma carica. -->
+                    <div class="hero-stamp" aria-hidden="true">
+                        <svg viewBox="0 0 120 120">
+                            <defs><path id="stamp-circle" d="M60 60m-47 0a47 47 0 1 1 94 0a47 47 0 1 1-94 0"/></defs>
+                            <circle cx="60" cy="60" r="58" class="stamp-ring"/>
+                            <text class="stamp-text"><textPath href="#stamp-circle" textLength="292">DIÁRIO DE CERVEJAS · BEBA COM MODERAÇÃO · </textPath></text>
+                            <use href="#i-cap" x="36" y="36" width="48" height="48" class="stamp-cap"/>
+                            <use href="#i-glass" x="51" y="48" width="18" height="23" class="stamp-glass"/>
+                        </svg>
+                    </div>
                     <div class="hero-text">
-                        <p class="eyebrow">O seu diário de cervejas</p>
+                        <p class="eyebrow">Nº 001 · O seu diário de cervejas</p>
                         <h1 id="home-title">Cada cerveja conta <em>uma história.</em></h1>
                         <p class="lead">Registe o que bebe, onde bebeu e o que achou. As estatísticas fazem o resto.</p>
                         <div class="hero-actions">
@@ -273,6 +292,7 @@
                 </div>
                 <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
                 <button type="button" class="fab" id="add-fab" aria-label="Registar cerveja" aria-controls="form-sheet" aria-expanded="false">
+                    <svg class="fab-cap" viewBox="-2 -2 44 44" aria-hidden="true"><use href="#i-cap"/></svg>
                     <svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>
                 </button>
             </section>
@@ -280,7 +300,7 @@
             <!-- Página de estatísticas -->
             <section id="stats-page" class="hidden" aria-labelledby="stats-title">
                 <div class="page-head">
-                    <p class="eyebrow">Os seus números</p>
+                    <p class="eyebrow">Nº 002 · Os seus números</p>
                     <h1 class="page-title" id="stats-title">Estatísticas</h1>
                 </div>
 
@@ -359,7 +379,7 @@
             <section id="map-page" class="hidden" aria-labelledby="map-title">
                 <div class="page-head map-head">
                     <div>
-                        <p class="eyebrow">Onde beber</p>
+                        <p class="eyebrow">Nº 003 · Onde beber</p>
                         <h1 class="page-title" id="map-title">Bares e pubs perto de si</h1>
                     </div>
                     <div class="map-search">

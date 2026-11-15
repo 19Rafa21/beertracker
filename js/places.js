@@ -114,6 +114,67 @@
         return places;
     }
 
+    // Resultados do Nominatim (pesquisa por amenity=pub|bar|biergarten) no mesmo formato
+    // de parsePlaces. É rápido (~0,5 s) mas limitado a 40 por tipo: serve de primeira vista.
+    function parseNominatimPlaces(list) {
+        const seen = {};
+        const places = [];
+        (Array.isArray(list) ? list : []).forEach(function (item) {
+            const name = String(item && item.name || '').trim();
+            const lat = Number(item && item.lat);
+            const lon = Number(item && item.lon);
+            const kind = item && (item.type === 'pub' || item.type === 'bar' || item.type === 'biergarten') ? item.type : null;
+            if (!name || !kind || !isFinite(lat) || !isFinite(lon)) {
+                return;
+            }
+            const id = item.osm_type + '/' + item.osm_id;
+            if (seen[id]) {
+                return;
+            }
+            seen[id] = true;
+            const a = item.address || {};
+            const extra = item.extratags || {};
+            const street = [a.road || a.pedestrian || a.square, a.house_number].filter(Boolean).join(' ');
+            const town = a.city || a.town || a.village || a.suburb || '';
+            places.push({
+                id: id,
+                name: name,
+                kind: kind,
+                lat: lat,
+                lon: lon,
+                address: [street, town].filter(Boolean).join(', '),
+                hours: String(extra.opening_hours || '').trim(),
+                website: safeUrl(extra.website || extra['contact:website']),
+                beers: String(extra.brewery || '').split(';').map(function (x) { return x.trim(); }).filter(Boolean),
+                outdoor: extra.outdoor_seating === 'yes' || kind === 'biergarten',
+                countryCode: /^[a-z]{2}$/i.test(a.country_code || '') ? a.country_code.toUpperCase() : ''
+            });
+        });
+        return places;
+    }
+
+    // Junta duas listas sem repetidos. Para o mesmo local, fica a versão de `primary`
+    // (o Overpass, mais completo), mas aproveita o país de `extra` se faltar.
+    function mergePlaces(primary, extra) {
+        const byId = {};
+        const result = [];
+        (primary || []).forEach(function (p) {
+            byId[p.id] = Object.assign({}, p);
+            result.push(byId[p.id]);
+        });
+        (extra || []).forEach(function (p) {
+            const existing = byId[p.id];
+            if (existing) {
+                existing.countryCode = existing.countryCode || p.countryCode;
+                existing.address = existing.address || p.address;
+                return;
+            }
+            byId[p.id] = Object.assign({}, p);
+            result.push(byId[p.id]);
+        });
+        return result;
+    }
+
     // Distância em km entre dois pontos { lat, lon } (fórmula de haversine).
     function distanceKm(a, b) {
         const toRad = function (deg) { return deg * Math.PI / 180; };
@@ -174,6 +235,8 @@
         formatAddress: formatAddress,
         safeUrl: safeUrl,
         parsePlaces: parsePlaces,
+        parseNominatimPlaces: parseNominatimPlaces,
+        mergePlaces: mergePlaces,
         distanceKm: distanceKm,
         sortByDistance: sortByDistance,
         formatDistance: formatDistance,
