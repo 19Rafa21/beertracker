@@ -5,10 +5,10 @@
     'use strict';
 
     const KINDS = {
-        pub: { label: 'Pub', icon: '🍺' },
-        bar: { label: 'Bar', icon: '🍸' },
-        biergarten: { label: 'Esplanada', icon: '🌳' },
-        brewery: { label: 'Cervejaria', icon: '🏭' }
+        pub: { label: 'Pub' },
+        bar: { label: 'Bar' },
+        biergarten: { label: 'Esplanada' },
+        brewery: { label: 'Cervejaria' }
     };
 
     // Acima disto a pesquisa fica pesada demais para o Overpass: pede-se para aproximar.

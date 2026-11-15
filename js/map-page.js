@@ -21,6 +21,12 @@
     const DEFAULT_VIEW = { lat: 38.7105, lon: -9.1435, zoom: 16 };
 
     const P = window.BeerPlaces;
+    // Ícone (do conjunto em index.html) de cada tipo de local.
+    const KIND_ICONS = { pub: 'beer', bar: 'martini', brewery: 'factory', biergarten: 'trees' };
+
+    function icon(name) {
+        return '<svg class="i" aria-hidden="true"><use href="#i-' + name + '"/></svg>';
+    }
     const $ = function (id) { return document.getElementById(id); };
 
     const state = {
@@ -247,7 +253,7 @@
     function pinIcon(kind) {
         return L.divIcon({
             className: 'place-pin place-pin-' + kind,
-            html: '<span><i>' + P.KINDS[kind].icon + '</i></span>',
+            html: '<span>' + icon(KIND_ICONS[kind]) + '</span>',
             iconSize: [34, 34],
             iconAnchor: [17, 34],
             popupAnchor: [0, -32]
@@ -258,21 +264,21 @@
         const kind = P.KINDS[place.kind];
         const rows = [];
         if (place.address) {
-            rows.push('<p class="popup-line">📍 ' + escapeHtml(place.address) + '</p>');
+            rows.push('<p class="popup-line">' + icon('pin') + escapeHtml(place.address) + '</p>');
         }
         if (place.hours) {
-            rows.push('<p class="popup-line">🕒 ' + escapeHtml(P.formatHours(place.hours)) + '</p>');
+            rows.push('<p class="popup-line">' + icon('clock') + escapeHtml(P.formatHours(place.hours)) + '</p>');
         }
         if (place.beers.length) {
-            rows.push('<p class="popup-line">🍺 ' + escapeHtml(place.beers.join(', ')) + '</p>');
+            rows.push('<p class="popup-line">' + icon('beer') + escapeHtml(place.beers.join(', ')) + '</p>');
         }
         const links = [
-            '<a href="https://www.google.com/maps/dir/?api=1&amp;destination=' + place.lat + ',' + place.lon + '" target="_blank" rel="noopener">Como chegar</a>',
-            place.website ? '<a href="' + escapeHtml(place.website) + '" target="_blank" rel="noopener">Site</a>' : '',
+            '<a href="https://www.google.com/maps/dir/?api=1&amp;destination=' + place.lat + ',' + place.lon + '" target="_blank" rel="noopener">' + icon('route') + 'Como chegar</a>',
+            place.website ? '<a href="' + escapeHtml(place.website) + '" target="_blank" rel="noopener">' + icon('external') + 'Site</a>' : '',
             '<a href="https://www.openstreetmap.org/' + escapeHtml(place.id) + '" target="_blank" rel="noopener">OpenStreetMap</a>'
         ].filter(Boolean).join('');
         return '<div class="place-popup">' +
-            '<p class="popup-kind">' + kind.icon + ' ' + escapeHtml(kind.label) + (place.outdoor && place.kind !== 'biergarten' ? ' · esplanada' : '') + '</p>' +
+            '<p class="popup-kind place-pin-' + place.kind + '">' + icon(KIND_ICONS[place.kind]) + escapeHtml(kind.label) + (place.outdoor && place.kind !== 'biergarten' ? ' · esplanada' : '') + '</p>' +
             '<h3>' + escapeHtml(place.name) + '</h3>' +
             rows.join('') +
             '<div class="popup-links">' + links + '</div>' +
@@ -312,7 +318,7 @@
         $('place-list').innerHTML = visible.map(function (place) {
             const kind = P.KINDS[place.kind];
             return '<li><button type="button" class="place-item" data-place="' + escapeHtml(place.id) + '">' +
-                '<span class="place-icon place-pin-' + place.kind + '" aria-hidden="true">' + kind.icon + '</span>' +
+                '<span class="place-icon place-pin-' + place.kind + '">' + icon(KIND_ICONS[place.kind]) + '</span>' +
                 '<span class="place-main">' +
                     '<span class="place-name">' + escapeHtml(place.name) + '</span>' +
                     '<span class="place-meta">' + escapeHtml([kind.label, place.address].filter(Boolean).join(' · ')) + '</span>' +

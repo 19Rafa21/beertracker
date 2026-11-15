@@ -50,7 +50,7 @@
     const $ = function (id) { return document.getElementById(id); };
 
     const form = $('beer-form');
-    const beerListBody = $('beer-list-body');
+    const beerListBody = $('beer-list');
     const searchInput = $('search');
     const filterType = $('filter-type');
     const pages = { home: $('home-page'), stats: $('stats-page'), map: $('map-page') };
@@ -76,6 +76,17 @@
     function todayIso() {
         const d = new Date();
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+    // 'AAAA-MM-DD' -> { day: '15', month: 'fev', year: '2025' }, para a data dos cartões.
+    function dateParts(isoDate) {
+        const parts = String(isoDate).split('-');
+        if (parts.length !== 3) {
+            return { day: '', month: '', year: String(isoDate) };
+        }
+        return { day: String(Number(parts[2])), month: MONTHS_SHORT[Number(parts[1]) - 1] || '', year: parts[0] };
     }
 
     function formatNumber(value, decimals) {
@@ -455,6 +466,11 @@
         $('hero-total').textContent = stats.total;
         $('hero-countries').textContent = stats.countries;
         $('hero-rating').textContent = stats.total ? formatNumber(stats.avgRating, 1) : '–';
+
+        // O copo do topo enche-se com a cor do tipo preferido (ou do último registo).
+        const latest = BeerStats.sortBeers(beers, 'date', 'desc')[0];
+        const type = stats.topType || (latest && latest.type) || 'Lager';
+        document.querySelector('.hero').style.setProperty('--glass-color', typeColor(type));
     }
 
     function render() {
@@ -492,36 +508,48 @@
         filterType.value = types.indexOf(selected) !== -1 ? selected : '';
     }
 
-    const EDIT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
-    const DELETE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+    function iconSvg(name) {
+        return '<svg class="i" aria-hidden="true"><use href="#i-' + name + '"/></svg>';
+    }
 
     function renderBeerList() {
         const filtered = BeerStats.filterBeers(beers, { query: searchInput.value, type: filterType.value });
         const sorted = BeerStats.sortBeers(filtered, sortState.field, sortState.direction);
 
-        beerListBody.innerHTML = sorted.map(function (beer) {
+        beerListBody.innerHTML = sorted.map(function (beer, index) {
             const name = escapeHtml(beer.name);
-            return '<tr data-id="' + escapeHtml(beer.id) + '" style="--type-color: ' + typeColor(beer.type) + '"' + (beer.id === highlightId ? ' class="highlight"' : '') + '>' +
-                '<td class="cell-date" data-label="Data">' + escapeHtml(formatDate(beer.date)) + '</td>' +
-                '<td class="cell-name"><div class="beer-name">' + name + '</div>' +
-                    '<div class="beer-brand">' + escapeHtml(beer.brand) + '</div>' +
-                    (beer.notes ? '<div class="beer-notes">' + escapeHtml(beer.notes) + '</div>' : '') + '</td>' +
-                '<td class="cell-type"><span class="type-badge">' + escapeHtml(beer.type) + '</span></td>' +
-                '<td class="cell-country" data-label="País">' + escapeHtml(beer.country) + '</td>' +
-                '<td class="cell-abv num" data-label="ABV">' + escapeHtml(formatNumber(beer.abv, 1)) + '%</td>' +
-                '<td class="cell-rating">' + ratingHtml(Number(beer.rating)) + '</td>' +
-                '<td class="cell-actions"><div class="row-actions">' +
-                    '<button type="button" class="icon-button" data-action="edit" aria-label="Editar ' + name + '" title="Editar">' + EDIT_ICON + '</button>' +
-                    '<button type="button" class="icon-button danger" data-action="remove" aria-label="Remover ' + name + '" title="Remover">' + DELETE_ICON + '</button>' +
-                '</div></td>' +
-                '</tr>';
+            const d = dateParts(beer.date);
+            const sub = [beer.brand, beer.country].filter(Boolean).map(escapeHtml).join(' · ');
+            return '<li class="entry' + (beer.id === highlightId ? ' highlight' : '') + '" data-id="' + escapeHtml(beer.id) + '"' +
+                ' style="--type-color: ' + typeColor(beer.type) + '; --i: ' + Math.min(index, 12) + '">' +
+                '<time class="entry-date" datetime="' + escapeHtml(beer.date) + '">' +
+                    '<span class="entry-day">' + escapeHtml(d.day) + '</span>' +
+                    '<span class="entry-month">' + escapeHtml(d.month) + '</span>' +
+                    '<span class="entry-year">' + escapeHtml(d.year) + '</span>' +
+                '</time>' +
+                '<svg class="entry-glass" viewBox="0 0 32 40" aria-hidden="true"><use href="#i-glass"/></svg>' +
+                '<div class="entry-main">' +
+                    '<h3 class="entry-name">' + name + '</h3>' +
+                    '<p class="entry-sub">' + sub + '</p>' +
+                    '<div class="entry-tags">' +
+                        '<span class="type-badge">' + escapeHtml(beer.type) + '</span>' +
+                        '<span class="abv-pill">' + iconSvg('droplet') + escapeHtml(formatNumber(beer.abv, 1)) + '%</span>' +
+                    '</div>' +
+                    (beer.notes ? '<p class="entry-notes">' + escapeHtml(beer.notes) + '</p>' : '') +
+                '</div>' +
+                '<div class="entry-rating">' + ratingHtml(Number(beer.rating)) + '</div>' +
+                '<div class="row-actions">' +
+                    '<button type="button" class="icon-button" data-action="edit" aria-label="Editar ' + name + '" title="Editar">' + iconSvg('pencil') + '</button>' +
+                    '<button type="button" class="icon-button danger" data-action="remove" aria-label="Remover ' + name + '" title="Remover">' + iconSvg('trash') + '</button>' +
+                '</div>' +
+                '</li>';
         }).join('');
         highlightId = null;
 
         const isFiltering = Boolean(searchInput.value.trim() || filterType.value);
         $('empty-message').classList.toggle('hidden', beers.length > 0);
         $('no-results').classList.toggle('hidden', beers.length === 0 || sorted.length > 0);
-        document.querySelector('.table-wrapper').classList.toggle('hidden', sorted.length === 0);
+        beerListBody.classList.toggle('hidden', sorted.length === 0);
         document.querySelector('.toolbar').classList.toggle('hidden', beers.length === 0);
         $('export-button').disabled = beers.length === 0;
 
@@ -529,27 +557,15 @@
         if (beers.length) {
             countText = isFiltering
                 ? sorted.length + ' de ' + beers.length + ' cervejas'
-                : beers.length + (beers.length === 1 ? ' cerveja' : ' cervejas');
+                : beers.length + (beers.length === 1 ? ' cerveja registada' : ' cervejas registadas');
         }
         $('result-count').textContent = countText;
-
-        document.querySelectorAll('.sort-button').forEach(function (button) {
-            const th = button.closest('th');
-            if (button.dataset.sort === sortState.field) {
-                th.setAttribute('aria-sort', sortState.direction === 'asc' ? 'ascending' : 'descending');
-            } else {
-                th.removeAttribute('aria-sort');
-            }
-        });
     }
 
-    function handleSort(field) {
-        if (sortState.field === field) {
-            sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            // Datas, ABV e avaliação começam do maior; texto começa em A.
-            sortState = { field: field, direction: ['date', 'abv', 'rating'].indexOf(field) !== -1 ? 'desc' : 'asc' };
-        }
+    // O valor do menu é "campo-direção", por exemplo "rating-desc".
+    function handleSort() {
+        const parts = $('sort-select').value.split('-');
+        sortState = { field: parts[0], direction: parts[1] };
         renderBeerList();
     }
 
@@ -816,7 +832,7 @@
             if (!button) {
                 return;
             }
-            const id = Number(button.closest('tr').dataset.id);
+            const id = Number(button.closest('[data-id]').dataset.id);
             if (button.dataset.action === 'edit') {
                 startEdit(id);
             } else if (button.dataset.action === 'remove') {
@@ -826,9 +842,7 @@
 
         searchInput.addEventListener('input', renderBeerList);
         filterType.addEventListener('change', renderBeerList);
-        document.querySelectorAll('.sort-button').forEach(function (button) {
-            button.addEventListener('click', function () { handleSort(button.dataset.sort); });
-        });
+        $('sort-select').addEventListener('change', handleSort);
 
         $('export-button').addEventListener('click', exportBeers);
         $('import-file').addEventListener('change', function (event) {
