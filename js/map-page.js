@@ -175,7 +175,9 @@
                     if (signal.aborted) {
                         throw error;
                     }
-                    setStatus('O servidor de mapas está lento; a tentar outro…');
+                    if (!state.places.length) {
+                        setStatus('O servidor de mapas está lento; a tentar outro…');
+                    }
                     return next(error);
                 })
                 .finally(function () {
