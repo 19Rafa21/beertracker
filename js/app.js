@@ -52,6 +52,21 @@
         return luminance > 0.55 ? '#2a1600' : '#fff6e5';
     }
 
+    // Rotação "ao calhas" mas estável para cada cerveja (as caricas não ficam todas direitas).
+    function capRotation(id) {
+        let h = 0;
+        String(id).split('').forEach(function (ch) { h = (h * 31 + ch.charCodeAt(0)) % 997; });
+        return (h % 51) - 25;
+    }
+
+    // Carica com a cor e a abreviatura do tipo. `extraClass` muda o tamanho/contexto.
+    function capHtml(type, extraClass, label) {
+        const color = typeColor(type);
+        return '<span class="cap ' + (extraClass || '') + '" style="--type-color: ' + color + '; --cap-ink: ' + capInk(color) + '" aria-hidden="true">' +
+            '<svg viewBox="-2 -2 44 44"><use href="#i-cap"/></svg>' +
+            '<span class="cap-label">' + escapeHtml(label || TYPE_ABBR[type] || '···') + '</span></span>';
+    }
+
     // Nº de cada cerveja pela ordem em que foi bebida (como um número de lote).
     function batchNumbers() {
         const numbers = {};
@@ -176,7 +191,7 @@
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(beers));
         } catch (e) {
-            showToast('Não foi possível guardar. Os dados só ficam até fechar a página.');
+            showToast('Não deu para guardar. As caricas só ficam até fechares a página.');
         }
     }
 
@@ -205,12 +220,12 @@
         }
         render();
 
-        showToast('"' + removed.name + '" removida.', function () {
+        showToast('"' + removed.name + '" saiu da coleção.', function () {
             beers.splice(Math.min(index, beers.length), 0, removed);
             highlightId = removed.id;
             saveBeers();
             render();
-            showToast('Remoção anulada.');
+            showToast('Voltou para a coleção.');
         });
     }
 
@@ -354,8 +369,9 @@
         showErrors({});
         closeSuggestions();
         $('name-hint').textContent = DEFAULT_NAME_HINT;
-        $('form-title').textContent = 'Adicionar nova cerveja';
-        $('submit-button').textContent = 'Adicionar cerveja';
+        $('form-title').textContent = 'Nova cerveja';
+        $('submit-button').textContent = 'Guardar na coleção';
+        $('form-batch').textContent = 'Ficha de prova · Nº ' + String(beers.length + 1).padStart(3, '0');
         $('cancel-edit').classList.add('hidden');
         document.querySelector('.beer-form').classList.remove('editing');
     }
@@ -371,7 +387,8 @@
         });
         updateRatingOutput();
         showErrors({});
-        $('form-title').textContent = 'Editar cerveja';
+        $('form-title').textContent = 'Editar ' + beer.name;
+        $('form-batch').textContent = 'Ficha de prova · Nº ' + (batchNumbers()[beer.id] || '');
         $('submit-button').textContent = 'Guardar alterações';
         $('cancel-edit').classList.remove('hidden');
         document.querySelector('.beer-form').classList.add('editing');
@@ -392,7 +409,7 @@
             result.beer.id = nextId();
         }
         upsertBeer(result.beer);
-        showToast(isEdit ? 'Alterações guardadas.' : '"' + result.beer.name + '" adicionada.');
+        showToast(isEdit ? 'Alterações guardadas.' : 'Saúde! "' + result.beer.name + '" entrou na coleção.');
         resetForm();
         if (isSheetOpen()) {
             closeForm();
@@ -403,7 +420,7 @@
 
     // ---------- Sugestões de cervejas (catálogo + já registadas) ----------
 
-    const DEFAULT_NAME_HINT = 'Escolha uma sugestão para preencher a marca, o tipo e o teor.';
+    const DEFAULT_NAME_HINT = 'Escolhe uma sugestão e a marca, o tipo e o teor ficam preenchidos.';
     const suggest = { items: [], active: -1 };
 
     function suggestionSource() {
@@ -483,8 +500,8 @@
             input.classList.add('autofilled');
         });
         $('name-hint').textContent = item.mine
-            ? 'Preenchido com os dados do seu último registo desta cerveja.'
-            : 'Preenchido a partir do catálogo · origem: ' + item.origin + '. Pode alterar qualquer campo.';
+            ? 'Preenchido com o teu último registo desta cerveja.'
+            : 'Preenchido a partir do catálogo · origem: ' + item.origin + '. Podes mudar qualquer campo.';
         closeSuggestions();
         const next = $('beer-country');
         (next.value ? $('beer-rating') : next).focus();
@@ -548,14 +565,14 @@
 
     function registerAt(place) {
         resetForm();
-        $('beer-notes').value = 'Bebida em: ' + place.name + (place.address ? ' (' + place.address + ')' : '');
+        $('beer-notes').value = 'Bebida no ' + place.name + (place.address ? ' (' + place.address + ')' : '');
         const country = place.country || countryName(place.countryCode);
         if (country) {
             $('beer-country').value = country;
         }
         location.hash = PAGE_HASH.home;
         setTimeout(openForm, 80);
-        showToast('A registar uma cerveja em ' + place.name + '.');
+        showToast('Ficha aberta para ' + place.name + '. Saúde!');
     }
 
     // ---------- Lista ----------
@@ -566,10 +583,15 @@
         $('hero-countries').textContent = stats.countries;
         $('hero-rating').textContent = stats.total ? formatNumber(stats.avgRating, 1) : '–';
 
-        // O copo do topo enche-se com a cor do tipo preferido (ou do último registo).
-        const latest = BeerStats.sortBeers(beers, 'date', 'desc')[0];
-        const type = stats.topType || (latest && latest.type) || 'Lager';
-        document.querySelector('.hero').style.setProperty('--glass-color', typeColor(type));
+        // As últimas 5 caricas espalhadas no hero; o brilho de fundo tem a cor da mais recente.
+        const recent = BeerStats.sortBeers(beers, 'date', 'desc').slice(0, 5);
+        document.querySelector('.hero').style.setProperty('--glass-color', typeColor(recent.length ? recent[0].type : 'Lager'));
+        $('hero-caps').innerHTML = recent.length
+            ? recent.map(function (beer, i) {
+                return '<span class="hero-cap" style="--slot: ' + i + '; --rot: ' + capRotation(beer.id) + 'deg">' + capHtml(beer.type) + '</span>';
+            }).join('')
+            : '<span class="hero-cap" style="--slot: 0; --rot: -12deg">' + capHtml('Lager', '', '?') + '</span>';
+        $('stamp-num').textContent = String(stats.total).padStart(3, '0');
     }
 
     function render() {
@@ -623,8 +645,7 @@
             const sub = [beer.brand, beer.country].filter(Boolean).map(escapeHtml).join(' · ');
             return '<li class="entry' + (beer.id === highlightId ? ' highlight' : '') + '" data-id="' + escapeHtml(beer.id) + '"' +
                 ' style="--type-color: ' + color + '; --cap-ink: ' + capInk(color) + '; --i: ' + Math.min(index, 12) + '">' +
-                '<span class="entry-cap" aria-hidden="true"><svg viewBox="-2 -2 44 44"><use href="#i-cap"/></svg>' +
-                    '<span class="cap-label">' + escapeHtml(TYPE_ABBR[beer.type] || '···') + '</span></span>' +
+                capHtml(beer.type, 'entry-cap') +
                 '<div class="entry-main">' +
                     '<p class="entry-batch">Nº ' + escapeHtml(numbers[beer.id] || '') + '</p>' +
                     '<h3 class="entry-name">' + name + '</h3>' +
@@ -657,8 +678,8 @@
         let countText = '';
         if (beers.length) {
             countText = isFiltering
-                ? sorted.length + ' de ' + beers.length + ' cervejas'
-                : beers.length + (beers.length === 1 ? ' cerveja registada' : ' cervejas registadas');
+                ? sorted.length + ' de ' + beers.length + ' caricas'
+                : beers.length + (beers.length === 1 ? ' carica na coleção' : ' caricas na coleção');
         }
         $('result-count').textContent = countText;
     }
@@ -700,7 +721,7 @@
             }
             const message = 'Importar ' + result.beers.length + ' cervejas?' +
                 (result.skipped ? ' (' + result.skipped + ' inválidas serão ignoradas)' : '') +
-                '\n\nOK substitui a lista atual; Cancelar junta-as às existentes.';
+                '\n\nOK substitui a tua coleção; Cancelar junta-as às que já tens.';
             const replace = window.confirm(message);
             const base = replace ? [] : beers.slice();
             const ids = {};
@@ -717,9 +738,9 @@
             saveBeers();
             resetForm();
             render();
-            showToast(result.beers.length + ' cervejas importadas.');
+            showToast(result.beers.length + ' caricas importadas.');
         };
-        reader.onerror = function () { showToast('Não foi possível ler o ficheiro.'); };
+        reader.onerror = function () { showToast('Não deu para ler o ficheiro.'); };
         reader.readAsText(file);
     }
 
@@ -741,8 +762,8 @@
         $('total-brands').textContent = stats.brands;
         $('avg-rating').textContent = formatNumber(stats.avgRating, 1);
         $('avg-abv').textContent = formatNumber(stats.avgAbv, 1) + '%';
-        $('top-country').textContent = stats.topCountry ? 'Mais frequente: ' + stats.topCountry : '';
-        $('top-type').textContent = stats.topType ? 'Favorito: ' + stats.topType : '';
+        $('top-country').textContent = stats.topCountry ? 'Onde bebes mais: ' + stats.topCountry : '';
+        $('top-type').textContent = stats.topType ? 'O teu preferido: ' + stats.topType : '';
         $('best-beer').textContent = stats.best ? stats.best.name : '—';
         $('best-beer').title = stats.best ? stats.best.name : '';
         if (stats.best) {
@@ -753,7 +774,40 @@
             $('best-beer-sub').textContent = '';
         }
 
+        renderCollection(stats);
         renderCharts(stats);
+    }
+
+    const MILESTONES = [5, 10, 25, 50, 100, 250, 500, 1000];
+
+    // Grelha com uma carica por cerveja, pela ordem em que foram bebidas, mais
+    // lugares vazios até à próxima meta (5, 10, 25…).
+    function renderCollection(stats) {
+        const numbers = batchNumbers();
+        const ordered = BeerStats.sortBeers(beers, 'date', 'asc');
+        const goal = MILESTONES.find(function (m) { return m > ordered.length; }) || ordered.length;
+        const caps = ordered.map(function (beer, i) {
+            const label = 'Nº ' + numbers[beer.id] + ' · ' + beer.name + ' (' + beer.type + ', ' + formatNumber(beer.rating, 1) + ' estrelas)';
+            return '<li class="cap-item" style="--rot: ' + capRotation(beer.id) + 'deg; --i: ' + Math.min(i, 30) + '" title="' + escapeHtml(label) + '">' +
+                capHtml(beer.type) +
+                '<span class="cap-num">' + escapeHtml(numbers[beer.id]) + '</span>' +
+                '<span class="visually-hidden">' + escapeHtml(label) + '</span>' +
+                '</li>';
+        });
+        const slots = [];
+        for (let i = ordered.length; i < goal; i++) {
+            slots.push('<li class="cap-slot" aria-hidden="true"><span>' + String(i + 1).padStart(3, '0') + '</span></li>');
+        }
+        $('cap-grid').innerHTML = caps.join('') + slots.join('');
+        $('collection-count').textContent = stats.total + (stats.total === 1 ? ' carica' : ' caricas');
+        const missing = goal - ordered.length;
+        $('collection-next').textContent = missing > 0
+            ? 'Faltam ' + missing + ' para as ' + goal + '.'
+            : '';
+        $('cap-legend').innerHTML = BeerStats.sortCounts(stats.byType).map(function (t) {
+            return '<li style="--type-color: ' + typeColor(t.label) + '"><span class="legend-dot"></span>' +
+                escapeHtml(t.label) + ' <span class="mono">× ' + t.count + '</span></li>';
+        }).join('');
     }
 
     function cssVar(name) {
@@ -780,7 +834,7 @@
             borderColor: 'rgba(242, 162, 12, 0.4)',
             borderWidth: 1,
             padding: 10,
-            cornerRadius: 10,
+            cornerRadius: 6,
             displayColors: true,
             boxPadding: 4,
             titleFont: { weight: '700' }
@@ -799,22 +853,21 @@
         const ratingTypes = Object.keys(stats.ratingByType).sort(function (a, b) {
             return stats.ratingByType[b] - stats.ratingByType[a];
         });
-        const surface = cssVar('--surface');
         const primary = cssVar('--primary-color');
 
         drawChart('month', 'bar', {
             labels: months.map(function (m) { return m.label; }),
-            datasets: [{ data: months.map(function (m) { return m.count; }), backgroundColor: primary, hoverBackgroundColor: cssVar('--primary-strong'), borderRadius: 10, borderSkipped: false, maxBarThickness: 44 }]
+            datasets: [{ data: months.map(function (m) { return m.count; }), backgroundColor: primary, hoverBackgroundColor: cssVar('--amber-hot'), borderColor: cssVar('--line'), borderWidth: 2, borderRadius: 2, borderSkipped: false, maxBarThickness: 44 }]
         }, barOptions({ precision: 0 }));
 
         drawChart('country', 'doughnut', {
             labels: byCountry.map(function (c) { return c.label; }),
-            datasets: [{ data: byCountry.map(function (c) { return c.count; }), backgroundColor: CHART_COLORS, borderColor: surface, borderWidth: 3, hoverOffset: 8 }]
+            datasets: [{ data: byCountry.map(function (c) { return c.count; }), backgroundColor: CHART_COLORS, borderColor: cssVar('--line'), borderWidth: 2, hoverOffset: 8 }]
         }, pieOptions());
 
         drawChart('type', 'pie', {
             labels: byType.map(function (c) { return c.label; }),
-            datasets: [{ data: byType.map(function (c) { return c.count; }), backgroundColor: byType.map(function (c) { return typeColor(c.label); }), borderColor: surface, borderWidth: 3, hoverOffset: 8 }]
+            datasets: [{ data: byType.map(function (c) { return c.count; }), backgroundColor: byType.map(function (c) { return typeColor(c.label); }), borderColor: cssVar('--line'), borderWidth: 2, hoverOffset: 8 }]
         }, pieOptions());
 
         drawChart('rating', 'bar', {
@@ -822,7 +875,7 @@
             datasets: [{
                 data: ratingTypes.map(function (t) { return Number(stats.ratingByType[t].toFixed(2)); }),
                 backgroundColor: ratingTypes.map(typeColor),
-                borderRadius: 10, borderSkipped: false, maxBarThickness: 56, borderWidth: 1, borderColor: cssVar('--border')
+                borderRadius: 2, borderSkipped: false, maxBarThickness: 56, borderWidth: 2, borderColor: cssVar('--line')
             }]
         }, barOptions({ min: 0, max: 5, stepSize: 1 }));
     }

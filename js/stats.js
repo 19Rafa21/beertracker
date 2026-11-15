@@ -163,20 +163,20 @@
         };
         const errors = {};
 
-        if (!beer.name) { errors.name = 'Indique o nome da cerveja.'; }
-        if (!beer.brand) { errors.brand = 'Indique a marca.'; }
-        if (!beer.type) { errors.type = 'Escolha um tipo.'; }
-        if (!beer.country) { errors.country = 'Indique o país.'; }
+        if (!beer.name) { errors.name = 'Falta o nome da cerveja.'; }
+        if (!beer.brand) { errors.brand = 'Falta a marca.'; }
+        if (!beer.type) { errors.type = 'Escolhe um tipo.'; }
+        if (!beer.country) { errors.country = 'Onde a bebeste? Falta o país.'; }
         if (!isFinite(beer.abv) || beer.abv < 0 || beer.abv > 100) {
-            errors.abv = 'O teor alcoólico tem de estar entre 0 e 100.';
+            errors.abv = 'O teor vai de 0 a 100%.';
         }
         if (!isFinite(beer.rating) || beer.rating < 1 || beer.rating > 5 || (beer.rating * 2) % 1 !== 0) {
-            errors.rating = 'A avaliação vai de 1 a 5, em meios pontos.';
+            errors.rating = 'Dá de 1 a 5 estrelas (meias contam).';
         }
         if (!isValidIsoDate(beer.date)) {
-            errors.date = 'Data inválida.';
+            errors.date = 'Esta data não existe.';
         } else if (today && beer.date > today) {
-            errors.date = 'A data não pode ser no futuro.';
+            errors.date = 'Ainda não a bebeste: a data está no futuro.';
         }
 
         return { beer: beer, errors: errors };
@@ -231,13 +231,13 @@
         try {
             data = JSON.parse(json);
         } catch (e) {
-            throw new Error('O ficheiro não é JSON válido.');
+            throw new Error('Este ficheiro não é uma cópia do BeerTracker (JSON inválido).');
         }
         if (data && !Array.isArray(data) && Array.isArray(data.beers)) {
             data = data.beers;
         }
         if (!Array.isArray(data)) {
-            throw new Error('O ficheiro não contém uma lista de cervejas.');
+            throw new Error('Este ficheiro não tem uma lista de cervejas.');
         }
         const beers = [];
         let skipped = 0;

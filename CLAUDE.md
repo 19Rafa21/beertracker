@@ -26,6 +26,7 @@ Não há passo de build nem dependências npm.
 - `js/map-page.js` — página do mapa (Leaflet 1.9.4 por CDN, carregado só ao abrir a página): servidores Overpass alternativos, pesquisa de sítios no Nominatim, localização, filtros e "Registar uma cerveja aqui" (evento `beertracker:register-at`, tratado em `app.js`). `window.BeerMap.show()`.
 - `js/app.js` — dados (localStorage), renderização e eventos: adicionar/editar/remover (com anular), sugestões no campo do nome (combobox ARIA), pesquisa, filtro, ordenação, exportar/importar JSON, tema claro/escuro e navegação por hash (`#inicio`, `#estatisticas`, `#mapa`).
 - `tests/` — testes de `stats.js`, `catalog.js` e `places.js`.
+- `docs/brand-guidelines.md` — guia de marca: conceito, voz, cores, letras, motivos, componentes e movimento.
 
 ## Convenções
 
@@ -34,7 +35,8 @@ Não há passo de build nem dependências npm.
 - Lógica nova que não dependa do DOM vai para `js/stats.js` (ou outro módulo puro) com testes.
 - Tudo o que vem do utilizador passa por `escapeHtml` antes de entrar em `innerHTML`.
 - Ícones: só SVG do conjunto no topo do `index.html` (`<svg class="i"><use href="#i-nome"/></svg>`, traço ao estilo Lucide). Nada de emojis como ícones.
-- Identidade "coleção de caricas": cabeçalho e hero escuros (malte), cartões claros sobre papel creme (textura `--paper`), âmbar para ações, vermelho de rótulo (`--label-red`) para números de lote. Letras: Bricolage Grotesque condensada (`--font-display` com `--display-tight`) para títulos e números, Figtree para texto, Space Mono para "dados de rótulo" (teor `5,2% VOL`, datas, `Nº 005`, contagens). A carica (`#i-cap`) é o motivo da marca: logótipo, cada cerveja da lista (cor do tipo + abreviatura `TYPE_ABBR`), botão "+" e selo do hero. Não voltar a Fraunces/Inter nem a pares neutros genéricos. No telemóvel (≤720px) a navegação é uma barra fixa em baixo e o formulário abre como folha a partir do botão "+" (`openForm`/`closeForm` em `app.js`); não pôr `backdrop-filter`, `transform` nem `filter` em antepassados de elementos `position: fixed`.
+- Identidade e voz: seguir **`docs/brand-guidelines.md`** (fonte única). Resumo: "coleção de caricas" e caderno de provas; rótulos com contorno a tinta (`--line`), sombra dura (`--shadow`), cantos de 6–8px e filete tracejado; botões carimbados em maiúsculas condensadas; letras Bricolage Grotesque condensada + Figtree + Space Mono; carica (`#i-cap`, `capHtml()` em `app.js`) no logótipo, lista, hero, coleção, botão + e alfinetes do mapa. Textos tratam por **tu**, curtos, voz de taberna de bairro. A camada "Linguagem de rótulo" está no fim de `css/styles.css`.
+- No telemóvel (≤720px) a navegação é uma barra fixa em baixo e o formulário abre como folha a partir do botão "+" (`openForm`/`closeForm` em `app.js`); não pôr `backdrop-filter`, `transform` nem `filter` em antepassados de elementos `position: fixed`, nem mudar o `position` de `.beer-form` fora das regras de sticky/fixed.
 - Datas guardadas como `AAAA-MM-DD` (string). Não converter com `new Date()` para mostrar: usar `formatDate`.
 
 ## Dados

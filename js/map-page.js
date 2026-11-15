@@ -176,7 +176,7 @@
                         throw error;
                     }
                     if (!state.places.length) {
-                        setStatus('O servidor de mapas está lento; a tentar outro…');
+                        setStatus('O servidor de mapas está lento, a tentar outro…');
                     }
                     return next(error);
                 })
@@ -194,7 +194,7 @@
 
         if (P.isAreaTooLarge(view)) {
             state.lastSearch = null;
-            setStatus('Aproxime o mapa para procurar bares nesta zona.');
+            setStatus('Aproxima o mapa para procurar bares nesta zona.');
             state.places = [];
             showPlaces([]);
             $('search-area').classList.remove('hidden');
@@ -259,8 +259,8 @@
                 } else {
                     state.note = '';
                     setStatus(navigator.onLine === false
-                        ? 'Sem ligação. Verifique a internet e tente outra vez.'
-                        : 'Os servidores de mapas estão ocupados. Tente daqui a pouco.');
+                        ? 'Sem ligação. Vê a internet e tenta outra vez.'
+                        : 'Os servidores de mapas estão ocupados. Tenta daqui a pouco.');
                 }
                 $('search-area').classList.remove('hidden');
             })
@@ -325,10 +325,11 @@
     function pinIcon(kind) {
         return L.divIcon({
             className: 'place-pin place-pin-' + kind,
-            html: '<span>' + icon(KIND_ICONS[kind]) + '</span>',
-            iconSize: [34, 34],
-            iconAnchor: [17, 34],
-            popupAnchor: [0, -32]
+            // Carica pousada no mapa, com o ícone do tipo de local.
+            html: '<span class="pin-cap"><svg viewBox="-2 -2 44 44" aria-hidden="true"><use href="#i-cap"/></svg>' + icon(KIND_ICONS[kind]) + '</span>',
+            iconSize: [38, 38],
+            iconAnchor: [19, 19],
+            popupAnchor: [0, -16]
         });
     }
 
@@ -403,10 +404,10 @@
             return;
         }
         if (!places.length) {
-            setStatus('Nenhum bar encontrado aqui. Afaste o mapa ou procure outra zona.');
+            setStatus('Nenhum bar por aqui. Afasta o mapa ou procura outra zona.');
         } else {
             setStatus(visible.length + (visible.length === 1 ? ' local' : ' locais') +
-                (fromYou ? ', do mais perto de si' : ', do mais perto do centro do mapa') +
+                (fromYou ? ', do mais perto de ti' : ', do mais perto do centro do mapa') +
                 (state.note ? ' · ' + state.note : ''));
         }
     }
@@ -431,10 +432,10 @@
 
     function locate() {
         if (!navigator.geolocation) {
-            setStatus('Este browser não permite saber a sua localização.');
+            setStatus('Este browser não deixa saber onde estás.');
             return;
         }
-        setStatus('A obter a sua localização…');
+        setStatus('A ver onde estás…');
         navigator.geolocation.getCurrentPosition(function (pos) {
             state.userPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
             if (state.userMarker) {
@@ -447,8 +448,8 @@
             searchArea();
         }, function (error) {
             setStatus(error.code === 1
-                ? 'Sem autorização para usar a localização. Pode procurar por cidade ou bairro.'
-                : 'Não foi possível obter a sua localização.');
+                ? 'Sem autorização para usar a localização. Procura por cidade ou bairro.'
+                : 'Não deu para saber onde estás.');
         }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
     }
 
@@ -462,7 +463,7 @@
         nominatimFetch(url)
             .then(function (results) {
                 if (!results.length) {
-                    setStatus('Não encontrei "' + q + '". Experimente outro nome.');
+                    setStatus('Não encontrei "' + q + '". Experimenta outro nome.');
                     return;
                 }
                 const r = results[0];
@@ -477,7 +478,7 @@
                 searchArea();
             })
             .catch(function () {
-                setStatus('Não foi possível procurar esse sítio. Verifique a ligação.');
+                setStatus('Não deu para procurar esse sítio. Vê a ligação.');
             });
     }
 
