@@ -36,7 +36,8 @@
         return TYPE_COLORS[type] || '#9a8b78';
     }
 
-    const PAGE_HASH = { home: '#inicio', stats: '#estatisticas' };
+    const PAGE_HASH = { home: '#inicio', stats: '#estatisticas', map: '#mapa' };
+    const PAGE_TITLES = { home: 'Registo de Cervejas', stats: 'Estatísticas', map: 'Mapa de bares' };
     const FIELDS = ['name', 'brand', 'type', 'country', 'abv', 'rating', 'date', 'notes'];
 
     let beers = [];
@@ -52,7 +53,7 @@
     const beerListBody = $('beer-list-body');
     const searchInput = $('search');
     const filterType = $('filter-type');
-    const pages = { home: $('home-page'), stats: $('stats-page') };
+    const pages = { home: $('home-page'), stats: $('stats-page'), map: $('map-page') };
 
     // ---------- Utilitários ----------
 
@@ -238,6 +239,8 @@
         $('beer-rating').value = 3;
         updateRatingOutput();
         showErrors({});
+        closeSuggestions();
+        $('name-hint').textContent = DEFAULT_NAME_HINT;
         $('form-title').textContent = 'Adicionar nova cerveja';
         $('submit-button').textContent = 'Adicionar cerveja';
         $('cancel-edit').classList.add('hidden');
@@ -283,6 +286,166 @@
         if (!isEdit) {
             $('beer-name').focus();
         }
+    }
+
+    // ---------- Sugestões de cervejas (catálogo + já registadas) ----------
+
+    const DEFAULT_NAME_HINT = 'Escolha uma sugestão para preencher a marca, o tipo e o teor.';
+    const suggest = { items: [], active: -1 };
+
+    function suggestionSource() {
+        return BeerCatalog.buildSuggestions(beers, BeerCatalog.CATALOG);
+    }
+
+    // Destaca a parte do nome que corresponde à pesquisa (sem diferenciar acentos).
+    function highlightMatch(name, query) {
+        const plain = BeerCatalog.normalize(name);
+        const q = BeerCatalog.normalize(query);
+        const start = q ? plain.indexOf(q) : -1;
+        // A normalização mantém o número de caracteres para letras latinas comuns.
+        if (start === -1 || plain.length !== name.length) {
+            return escapeHtml(name);
+        }
+        return escapeHtml(name.slice(0, start)) +
+            '<mark>' + escapeHtml(name.slice(start, start + q.length)) + '</mark>' +
+            escapeHtml(name.slice(start + q.length));
+    }
+
+    function renderSuggestions(query) {
+        const list = $('name-suggestions');
+        const input = $('beer-name');
+        suggest.items = BeerCatalog.searchCatalog(suggestionSource(), query, 7);
+        suggest.active = -1;
+        input.removeAttribute('aria-activedescendant');
+
+        if (!suggest.items.length) {
+            closeSuggestions();
+            return;
+        }
+        list.innerHTML = suggest.items.map(function (item, i) {
+            const meta = [item.brand, item.type, formatNumber(item.abv, 1) + '%'];
+            return '<li role="option" id="suggestion-' + i + '" aria-selected="false" data-index="' + i + '" style="--type-color: ' + typeColor(item.type) + '">' +
+                '<span class="combo-name">' + highlightMatch(item.name, query) + '</span>' +
+                '<span class="combo-meta">' + escapeHtml(meta.join(' · ')) + '</span>' +
+                '<span class="combo-tag">' + escapeHtml(item.mine ? 'Já bebeu' : item.origin) + '</span>' +
+                '</li>';
+        }).join('');
+        list.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeSuggestions() {
+        $('name-suggestions').hidden = true;
+        $('beer-name').setAttribute('aria-expanded', 'false');
+        $('beer-name').removeAttribute('aria-activedescendant');
+        suggest.active = -1;
+    }
+
+    function setActiveSuggestion(index) {
+        const options = $('name-suggestions').querySelectorAll('[role="option"]');
+        if (!options.length) {
+            return;
+        }
+        suggest.active = (index + options.length) % options.length;
+        options.forEach(function (option, i) {
+            option.setAttribute('aria-selected', i === suggest.active ? 'true' : 'false');
+        });
+        const current = options[suggest.active];
+        $('beer-name').setAttribute('aria-activedescendant', current.id);
+        current.scrollIntoView({ block: 'nearest' });
+    }
+
+    // Preenche nome, marca, tipo e teor. O país fica de fora: é onde o utilizador a bebeu.
+    function applySuggestion(item) {
+        $('beer-name').value = item.name;
+        $('beer-brand').value = item.brand;
+        $('beer-type').value = item.type;
+        $('beer-abv').value = item.abv;
+        ['name', 'brand', 'type', 'abv'].forEach(function (field) {
+            const input = $('beer-' + field);
+            $('error-' + field).textContent = '';
+            input.removeAttribute('aria-invalid');
+            input.classList.remove('autofilled');
+            void input.offsetWidth; // reinicia a animação
+            input.classList.add('autofilled');
+        });
+        $('name-hint').textContent = item.mine
+            ? 'Preenchido com os dados do seu último registo desta cerveja.'
+            : 'Preenchido a partir do catálogo · origem: ' + item.origin + '. Pode alterar qualquer campo.';
+        closeSuggestions();
+        const next = $('beer-country');
+        (next.value ? $('beer-rating') : next).focus();
+    }
+
+    function initSuggestions() {
+        const input = $('beer-name');
+        const list = $('name-suggestions');
+
+        input.addEventListener('input', function () {
+            $('name-hint').textContent = DEFAULT_NAME_HINT;
+            renderSuggestions(input.value);
+        });
+        input.addEventListener('focus', function () {
+            if (input.value.trim() && !$('beer-brand').value) {
+                renderSuggestions(input.value);
+            }
+        });
+        input.addEventListener('keydown', function (event) {
+            const open = !list.hidden;
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                if (!open) {
+                    renderSuggestions(input.value);
+                }
+                if (!list.hidden) {
+                    event.preventDefault();
+                    setActiveSuggestion(suggest.active + (event.key === 'ArrowDown' ? 1 : -1));
+                }
+            } else if (event.key === 'Enter' && open && suggest.active !== -1) {
+                event.preventDefault();
+                applySuggestion(suggest.items[suggest.active]);
+            } else if (event.key === 'Escape' && open) {
+                event.stopPropagation();
+                closeSuggestions();
+            } else if (event.key === 'Tab' && open) {
+                closeSuggestions();
+            }
+        });
+        input.addEventListener('blur', function () {
+            // Dá tempo ao clique numa sugestão antes de fechar.
+            setTimeout(closeSuggestions, 120);
+        });
+        // mousedown em vez de click: escolhe antes de o campo perder o foco.
+        list.addEventListener('mousedown', function (event) {
+            const option = event.target.closest('[role="option"]');
+            event.preventDefault();
+            if (option) {
+                applySuggestion(suggest.items[Number(option.dataset.index)]);
+            }
+        });
+    }
+
+    // Vindo do mapa: novo registo com o nome do bar nas notas e o país, se o mapa o souber.
+    function countryName(code) {
+        try {
+            return code ? new Intl.DisplayNames(['pt-PT'], { type: 'region' }).of(code) : '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function registerAt(place) {
+        resetForm();
+        $('beer-notes').value = 'Bebida em: ' + place.name + (place.address ? ' (' + place.address + ')' : '');
+        const country = place.country || countryName(place.countryCode);
+        if (country) {
+            $('beer-country').value = country;
+        }
+        location.hash = PAGE_HASH.home;
+        setTimeout(function () {
+            document.querySelector('.beer-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            $('beer-name').focus({ preventScroll: true });
+        }, 50);
+        showToast('A registar uma cerveja em ' + place.name + '.');
     }
 
     // ---------- Lista ----------
@@ -563,7 +726,8 @@
     // ---------- Navegação ----------
 
     function pageFromHash() {
-        return location.hash === PAGE_HASH.stats ? 'stats' : 'home';
+        const page = Object.keys(PAGE_HASH).find(function (key) { return PAGE_HASH[key] === location.hash; });
+        return page || 'home';
     }
 
     function setActivePage(page) {
@@ -578,9 +742,11 @@
         Object.keys(pages).forEach(function (key) {
             pages[key].classList.toggle('hidden', key !== page);
         });
-        document.title = (page === 'stats' ? 'Estatísticas' : 'Registo de Cervejas') + ' · BeerTracker';
+        document.title = PAGE_TITLES[page] + ' · BeerTracker';
         if (page === 'stats') {
             renderStats();
+        } else if (page === 'map' && window.BeerMap) {
+            BeerMap.show();
         }
     }
 
@@ -622,6 +788,7 @@
         resetForm();
 
         form.addEventListener('submit', handleSubmit);
+        initSuggestions();
         $('beer-rating').addEventListener('input', updateRatingOutput);
         $('cancel-edit').addEventListener('click', resetForm);
         $('hero-cta').addEventListener('click', function (event) {
@@ -690,6 +857,11 @@
             }
         }
         updateThemeButton();
+
+        // "Registar uma cerveja aqui" no mapa: abre o formulário com o local nas notas.
+        window.addEventListener('beertracker:register-at', function (event) {
+            registerAt(event.detail);
+        });
 
         // Mantém os dados sincronizados entre separadores abertos.
         window.addEventListener('storage', function (event) {

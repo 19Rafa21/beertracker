@@ -36,6 +36,7 @@
                 <ul class="nav-links">
                     <li><a href="#inicio" class="nav-item" data-page="home">Início</a></li>
                     <li><a href="#estatisticas" class="nav-item" data-page="stats">Estatísticas</a></li>
+                    <li><a href="#mapa" class="nav-item" data-page="map">Mapa</a></li>
                     <li>
                         <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Mudar para tema escuro" title="Mudar tema">
                             <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -74,7 +75,13 @@
                             <div class="form-grid">
                                 <div class="form-group span-2">
                                     <label for="beer-name">Nome da cerveja</label>
-                                    <input type="text" id="beer-name" name="name" class="form-control" required maxlength="80" autocomplete="off" aria-describedby="error-name">
+                                    <div class="combo">
+                                        <input type="text" id="beer-name" name="name" class="form-control" required maxlength="80" autocomplete="off"
+                                               placeholder="Comece a escrever: Super Bock, Duvel, Guinness…"
+                                               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="name-suggestions" aria-describedby="name-hint error-name">
+                                        <ul class="combo-list" id="name-suggestions" role="listbox" aria-label="Sugestões de cervejas" hidden></ul>
+                                    </div>
+                                    <p class="field-hint" id="name-hint">Escolha uma sugestão para preencher a marca, o tipo e o teor.</p>
                                     <p class="field-error" id="error-name"></p>
                                 </div>
                                 <div class="form-group">
@@ -260,6 +267,51 @@
                     </div>
                 </div>
             </section>
+
+            <!-- Página do mapa -->
+            <section id="map-page" class="hidden" aria-labelledby="map-title">
+                <div class="page-head map-head">
+                    <div>
+                        <p class="eyebrow">Onde beber</p>
+                        <h1 class="page-title" id="map-title">Bares e pubs perto de si</h1>
+                    </div>
+                    <div class="map-search">
+                        <form id="place-search" class="map-search-form" role="search">
+                            <label for="place-query" class="visually-hidden">Procurar cidade, bairro ou morada</label>
+                            <input type="search" id="place-query" class="form-control" placeholder="Cidade, bairro ou morada…" autocomplete="off" maxlength="120">
+                            <button type="submit" class="btn btn-primary">Procurar</button>
+                        </form>
+                        <button type="button" class="btn btn-ghost" id="locate-button">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm9 3h-2.06A7 7 0 0 0 13 5.06V3h-2v2.06A7 7 0 0 0 5.06 11H3v2h2.06A7 7 0 0 0 11 18.94V21h2v-2.06A7 7 0 0 0 18.94 13H21v-2zm-9 6a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/></svg>
+                            Perto de mim
+                        </button>
+                    </div>
+                </div>
+
+                <div class="kind-filters" role="group" aria-label="Filtrar por tipo de local" id="kind-filters">
+                    <button type="button" class="chip" data-kind="all" aria-pressed="true">Todos <span class="chip-count"></span></button>
+                    <button type="button" class="chip" data-kind="pub" aria-pressed="false">🍺 Pubs <span class="chip-count"></span></button>
+                    <button type="button" class="chip" data-kind="bar" aria-pressed="false">🍸 Bares <span class="chip-count"></span></button>
+                    <button type="button" class="chip" data-kind="brewery" aria-pressed="false">🏭 Cervejarias <span class="chip-count"></span></button>
+                    <button type="button" class="chip" data-kind="biergarten" aria-pressed="false">🌳 Esplanadas <span class="chip-count"></span></button>
+                </div>
+
+                <div class="map-layout">
+                    <div class="card map-card">
+                        <div id="map" class="map" aria-label="Mapa de bares e pubs"></div>
+                        <button type="button" class="btn btn-primary map-refresh hidden" id="search-area">Procurar nesta zona</button>
+                        <p id="map-unavailable" class="map-unavailable hidden">Não foi possível carregar o mapa (sem ligação à internet).</p>
+                    </div>
+                    <aside class="card place-panel" aria-labelledby="places-title">
+                        <div class="place-panel-head">
+                            <h2 id="places-title">Nesta zona</h2>
+                            <p class="result-count" id="map-status" aria-live="polite"></p>
+                        </div>
+                        <ul class="place-list" id="place-list"></ul>
+                    </aside>
+                </div>
+                <p class="map-credit muted">Dados de locais e mapa © colaboradores do <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>. Falta um bar? Qualquer pessoa o pode acrescentar no OpenStreetMap.</p>
+            </section>
         </div>
     </main>
 
@@ -276,6 +328,9 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="js/stats.js"></script>
+    <script src="js/catalog.js"></script>
+    <script src="js/places.js"></script>
+    <script src="js/map-page.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

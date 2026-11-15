@@ -612,6 +612,105 @@ textarea.form-control {
     margin-top: 0.15rem;
 }
 
+.field-hint {
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-top: 0.3rem;
+}
+
+/* Campo com sugestões (nome da cerveja) */
+.combo {
+    position: relative;
+}
+
+.combo-list {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    max-height: 320px;
+    overflow-y: auto;
+    list-style: none;
+    padding: 6px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+    animation: rise-in 0.16s ease-out;
+}
+
+.combo-list li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0 10px;
+    padding: 0.5rem 0.65rem 0.5rem 0.9rem;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+}
+
+.combo-list li::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 9px;
+    bottom: 9px;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--type-color);
+}
+
+.combo-list li:hover,
+.combo-list li[aria-selected="true"] {
+    background: var(--primary-soft);
+}
+
+.combo-name {
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.combo-name mark {
+    background: none;
+    color: var(--primary-strong);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
+.combo-meta {
+    grid-column: 1;
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.combo-tag {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.1rem 0.55rem;
+    white-space: nowrap;
+}
+
+.form-control.autofilled {
+    animation: autofill 1.2s ease-out;
+}
+
+@keyframes autofill {
+    0% { background-color: var(--primary-soft); border-color: var(--primary-color); }
+    100% { background-color: var(--surface-2); }
+}
+
 .rating-input {
     display: flex;
     align-items: center;
@@ -1145,6 +1244,348 @@ th[aria-sort="descending"] .sort-button::after { content: '▼'; font-size: 0.8e
     to { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
 
+/* ---------- Mapa ---------- */
+
+.map-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    margin-bottom: 1.1rem;
+}
+
+.map-search {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex: 1 1 420px;
+    max-width: 560px;
+}
+
+.map-search-form {
+    display: flex;
+    gap: 8px;
+    flex: 1 1 260px;
+}
+
+.map-search-form .form-control {
+    flex: 1;
+    min-width: 0;
+    border-radius: 999px;
+    padding-left: 1rem;
+}
+
+.map-search .btn svg,
+.map-search .btn {
+    flex-shrink: 0;
+}
+
+.map-search .btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.kind-filters {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 1rem;
+    scrollbar-width: none;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.chip:hover:not(:disabled) {
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+}
+
+.chip[aria-pressed="true"] {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--on-primary);
+}
+
+.chip:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.chip-count {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+    opacity: 0.75;
+}
+
+.chip-count:empty {
+    display: none;
+}
+
+.map-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 1.25rem;
+    align-items: stretch;
+}
+
+.map-card {
+    position: relative;
+    padding: 0;
+    overflow: hidden;
+    min-height: 560px;
+}
+
+.map {
+    position: absolute;
+    inset: 0;
+    background: var(--surface-2);
+    font-family: var(--font-body);
+}
+
+.map-refresh {
+    position: absolute;
+    z-index: 500;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: var(--shadow-lg);
+    white-space: nowrap;
+}
+
+.map-refresh:hover {
+    transform: translateX(-50%) translateY(-1px);
+}
+
+.map-unavailable {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    text-align: center;
+    color: var(--muted);
+}
+
+/* Mapa escuro: inverte as cores dos azulejos e mantém os tons naturais. */
+:root[data-theme="dark"] .map .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .map .leaflet-tile-pane {
+        filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+    }
+}
+
+.place-pin {
+    background: none;
+    border: none;
+}
+
+.place-pin span {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50% 50% 50% 6px;
+    transform: rotate(-45deg);
+    background: var(--pin, var(--amber));
+    border: 2px solid #fff;
+    box-shadow: 0 4px 10px rgba(36, 21, 9, 0.35);
+    font-size: 16px;
+    line-height: 1;
+}
+
+.place-pin-pub { --pin: #f2a20c; }
+.place-pin-bar { --pin: #d95d39; }
+.place-pin-brewery { --pin: #3d8b7a; }
+.place-pin-biergarten { --pin: #8a9a5b; }
+
+/* o emoji fica direito dentro do alfinete rodado */
+.place-pin i {
+    display: block;
+    font-style: normal;
+    transform: rotate(45deg);
+}
+
+.place-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem 0.75rem 0.75rem;
+    max-height: 560px;
+    min-height: 0;
+}
+
+.place-panel-head {
+    padding: 0 0.5rem 0.4rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.place-panel-head h2 {
+    margin-bottom: 0;
+}
+
+.place-list {
+    list-style: none;
+    overflow-y: auto;
+    flex: 1;
+    padding-top: 0.4rem;
+}
+
+.place-list[aria-busy="true"] {
+    opacity: 0.5;
+}
+
+.place-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 0.6rem 0.5rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.place-item:hover {
+    background: var(--primary-soft);
+}
+
+.place-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--pin) 22%, transparent);
+    font-size: 17px;
+}
+
+.place-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.place-name {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.place-meta {
+    color: var(--muted);
+    font-size: 0.8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.place-distance {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--primary-strong);
+    font-variant-numeric: tabular-nums;
+}
+
+.map-credit {
+    font-size: 0.8rem;
+    margin-top: 0.9rem;
+}
+
+/* Popup do Leaflet com o aspeto da app */
+.map .leaflet-popup-content-wrapper {
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+}
+
+.map .leaflet-popup-tip {
+    background: var(--surface);
+}
+
+.map .leaflet-popup-content {
+    margin: 14px 16px;
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.map .leaflet-container a.leaflet-popup-close-button {
+    color: var(--muted);
+}
+
+.place-popup h3 {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    margin: 0.1rem 0 0.4rem;
+}
+
+.popup-kind {
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 !important;
+}
+
+.popup-line {
+    margin: 0.2rem 0 !important;
+}
+
+.popup-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin: 0.6rem 0 0.7rem;
+}
+
+.popup-links a {
+    color: var(--primary-strong);
+    font-weight: 600;
+}
+
+.popup-register {
+    width: 100%;
+}
+
+.map .leaflet-control-attribution {
+    background: color-mix(in srgb, var(--surface) 85%, transparent);
+    color: var(--muted);
+}
+
+.map .leaflet-control-attribution a {
+    color: var(--text);
+}
+
 @media (prefers-reduced-motion: reduce) {
     html {
         scroll-behavior: auto;
@@ -1167,6 +1608,19 @@ th[aria-sort="descending"] .sort-button::after { content: '▼'; font-size: 0.8e
 @media (max-width: 960px) {
     .home-layout {
         grid-template-columns: 1fr;
+    }
+
+    .map-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .map-card {
+        min-height: 0;
+        height: 62vh;
+    }
+
+    .place-panel {
+        max-height: none;
     }
 
     .beer-form {
